@@ -9,6 +9,6 @@
     <param name="svox_tts/speed"    value="$(arg svoxSpeed)"   />
     <param name="svox_tts/language" value="$(arg svoxLanguage)"/>
 
-    <node pkg="svox_tts" type="svox_tts" name="svox_tts" output="screen"/>
+    <node pkg="svox_tts" type="svox_tts" name="svox_tts"/>
 
 </launch>

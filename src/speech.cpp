@@ -37,6 +37,10 @@ Speech::Speech(std::string _fullpath) : fullpath(_fullpath)
     service = nh.advertiseService(topic, &Speech::serviceCb, this);
     ROS_INFO("Created service server with topic : %s", topic.c_str());
 
+    topic = "/svox_tts/speech_output";
+    s_output = nh.advertise<std_msgs::String>(topic,1);
+    ROS_INFO("Created speech output publisher with name : %s", topic.c_str());
+
     pcmDevice.clear();
 
     supportedLangs.push_back("en-US");
@@ -113,11 +117,11 @@ bool Speech::serviceCb(svox_tts::Speech::Request  &req,
     }
     else if (req.mode == svox_tts::Speech::Request::SAY)
     {
-        say(req.string);
+        res.success = say(req.string);
     }
     else if (req.mode == svox_tts::Speech::Request::RESET)
     {
-        resetDefaults();
+        res.success = resetDefaults();
     }
     else
     {
@@ -127,6 +131,15 @@ bool Speech::serviceCb(svox_tts::Speech::Request  &req,
 
     return true;
 };
+
+void Speech::publishSpeechOutput(const std::string &text)
+{
+    std_msgs::String msg;
+
+    msg.data = text;
+
+    s_output.publish(msg);
+}
 
 bool Speech::playWav(const std::string& filename)
 {
@@ -140,7 +153,7 @@ bool Speech::playWav(const std::string& filename)
     ROS_INFO_STREAM(cmd);
     int ret = system(cmd.c_str());
     if(ret != 0) {
-        ROS_WARN_STREAM("Cannot play wave file"<<filename);
+        ROS_ERR("Cannot play wave file %s", filename.c_str());
         return false;
     }
     return true;
@@ -199,6 +212,8 @@ bool Speech::say(const std::string& text)
     std::string waveFile = renderSpeech(text);
     if(waveFile.size() == 0)
         return false;
+
+    publishSpeechOutput(text);
     return playWav(waveFile);
 }
 

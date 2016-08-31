@@ -64,7 +64,8 @@ private: // ROS Stuff
     ros::NodeHandle nh;
 
     ros::ServiceServer service;  // Service for the speech output and other options
-    std::string speech;          // Text to say
+    ros::Publisher     s_output; // Publisher with the speech output (useful to other nodes,
+                                 // such as baxter_collaboration/baxter_display)
 
     /**
      * Callback for the service that interfaces with this class
@@ -74,6 +75,12 @@ private: // ROS Stuff
      */
     bool serviceCb(svox_tts::Speech::Request  &req,
                    svox_tts::Speech::Response &res);
+
+    /**
+     * Publishes the text that have been said on a topic
+     * @param text The text to publish
+     */
+    void publishSpeechOutput(const std::string &text);
 
 private: // picotts
     /* adapation layer global variables */
