@@ -153,7 +153,7 @@ bool Speech::playWav(const std::string& filename)
     ROS_INFO_STREAM(cmd);
     int ret = system(cmd.c_str());
     if(ret != 0) {
-        ROS_ERR("Cannot play wave file %s", filename.c_str());
+        ROS_ERROR("Cannot play wave file %s", filename.c_str());
         return false;
     }
     return true;
