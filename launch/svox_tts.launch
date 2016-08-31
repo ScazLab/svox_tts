@@ -1,0 +1,14 @@
+<launch>
+    <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find svox_tts)/rosconsole.conf"/> -->
+
+    <arg name="svoxPitch"    default="55"   />
+    <arg name="svoxSpeed"    default="110"  />
+    <arg name="svoxLanguage" default="en-US"/>
+
+    <param name="svox_tts/pitch"    value="$(arg svoxPitch)"   />
+    <param name="svox_tts/speed"    value="$(arg svoxSpeed)"   />
+    <param name="svox_tts/language" value="$(arg svoxLanguage)"/>
+
+    <node pkg="svox_tts" type="svox_tts" name="svox_tts" output="screen"/>
+
+</launch>
