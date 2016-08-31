@@ -149,8 +149,9 @@ bool Speech::playWav(const std::string& filename)
     if(pcmDevice.size())
         cmd += "--device=\""+pcmDevice+"\" ";
     cmd += filename;
+    cmd += " >/dev/null 2>&1"; // This is to suppress the system() output
 
-    ROS_INFO_STREAM(cmd);
+    ROS_DEBUG("Sending system call: %s", cmd.c_str());
     int ret = system(cmd.c_str());
     if(ret != 0) {
         ROS_ERROR("Cannot play wave file %s", filename.c_str());
