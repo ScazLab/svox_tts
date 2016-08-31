@@ -1,0 +1,17 @@
+int32   mode
+string  string  # Optional, used only when mode == SAY       || SET_LANGUAGE
+int32   value   # Optional, used only when mode == SET_SPEED || SET_PITCH
+
+int32 SET_LANGUAGE=1
+int32 GET_LANGUAGE=11
+int32 SET_SPEED=2
+int32 GET_SPEED=22
+int32 SET_PITCH=3
+int32 GET_PITCH=33
+int32 GET_SUPPORTED_LANG=4
+int32 SAY=5
+int32 RESET=6  # Resets pitch, speed and language to the default values stored in the parameter server
+---
+bool   success
+string response # Optional, used only when mode == GET_LANGUAGE || GET_SUPPORTED_LANG
+int32  value    # Optional, used only when mode == GET_SPEED    || GET_PITCH
