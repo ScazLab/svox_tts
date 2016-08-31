@@ -25,7 +25,7 @@ const char * picoInternalLang[]             = { "en-US",            "en-GB",    
 const char * picoInternalTaLingware[]       = { "en-US_ta.bin",     "en-GB_ta.bin",     "de-DE_ta.bin",     "es-ES_ta.bin",     "fr-FR_ta.bin",     "it-IT_ta.bin" };
 const char * picoInternalSgLingware[]       = { "en-US_lh0_sg.bin", "en-GB_kh0_sg.bin", "de-DE_gl0_sg.bin", "es-ES_zl0_sg.bin", "fr-FR_nk0_sg.bin", "it-IT_cm0_sg.bin" };
 const char * picoInternalUtppLingware[]     = { "en-US_utpp.bin",   "en-GB_utpp.bin",   "de-DE_utpp.bin",   "es-ES_utpp.bin",   "fr-FR_utpp.bin",   "it-IT_utpp.bin" };
-const int picoNumSupportedVocs              = 6;
+const int    picoNumSupportedVocs           = 6;
 
 
 /****************************************************************
@@ -33,19 +33,21 @@ const int picoNumSupportedVocs              = 6;
  */
 Speech::Speech(std::string _fullpath) : fullpath(_fullpath)
 {
-    s_sub = nh.subscribe("/action_provider/speech",1, &Speech::speechCb, this);
-
-    setPitch(55);
-    setSpeed(120);
+    std::string topic = "/svox_tts/speech";
+    service = nh.advertiseService(topic, &Speech::serviceCb, this);
+    ROS_INFO("Created service server with topic : %s", topic.c_str());
 
     pcmDevice.clear();
-    language = "en-US";
+
     supportedLangs.push_back("en-US");
     supportedLangs.push_back("en-GB");
     supportedLangs.push_back("es-ES");
     supportedLangs.push_back("fr-FR");
     supportedLangs.push_back("it-IT");
     supportedLangs.push_back("de-DE");
+
+    resetDefaults();
+
     // picotts
     picoMemArea         = NULL;
     picoSystem          = NULL;
@@ -62,17 +64,72 @@ Speech::Speech(std::string _fullpath) : fullpath(_fullpath)
     picoSynthAbort = 0;
 }
 
-Speech::~Speech() {
+Speech::~Speech()
+{
 
 }
 
-void Speech::speechCb(const std_msgs::String& msg)
+bool Speech::serviceCb(svox_tts::Speech::Request  &req,
+                       svox_tts::Speech::Response &res)
 {
-    printf("Message received!\n");
-    say(msg.data);
+    ROS_INFO("Service request received. Mode: %i string: %s value: %i",
+                              req.mode, req.string.c_str(), req.value);
+
+    res.success = true;
+
+    if      (req.mode == svox_tts::Speech::Request::SET_LANGUAGE)
+    {
+        res.success = setLanguage(req.string);
+    }
+    else if (req.mode == svox_tts::Speech::Request::GET_LANGUAGE)
+    {
+        res.response = getLanguage();
+    }
+    else if (req.mode == svox_tts::Speech::Request::SET_SPEED)
+    {
+        res.success = setSpeed(req.value);
+    }
+    else if (req.mode == svox_tts::Speech::Request::GET_SPEED)
+    {
+        res.value = getSpeed();
+    }
+    else if (req.mode == svox_tts::Speech::Request::SET_PITCH)
+    {
+        res.success = setPitch(req.value);
+    }
+    else if (req.mode == svox_tts::Speech::Request::GET_PITCH)
+    {
+        res.value = getPitch();
+    }
+    else if (req.mode == svox_tts::Speech::Request::GET_SUPPORTED_LANG)
+    {
+        res.response = "";
+
+        for (int i = 0; i < supportedLangs.size(); ++i)
+        {
+            res.response = res.response + supportedLangs[i] + ", ";
+        }
+        res.response = res.response.substr(0, res.response.size()-2); // Remove the last ", "
+    }
+    else if (req.mode == svox_tts::Speech::Request::SAY)
+    {
+        say(req.string);
+    }
+    else if (req.mode == svox_tts::Speech::Request::RESET)
+    {
+        resetDefaults();
+    }
+    else
+    {
+        ROS_ERROR("The service request was not among the allowed ones!");
+        res.success = false;
+    }
+
+    return true;
 };
 
-bool Speech::playWav(const std::string& filename) {
+bool Speech::playWav(const std::string& filename)
+{
     std::string cmd;
     // aplay --device="plughw:1,0" speech.wav
     cmd = "aplay ";
@@ -89,56 +146,76 @@ bool Speech::playWav(const std::string& filename) {
     return true;
 }
 
-bool Speech::setLanguage(const std::string& language) {
+bool Speech::setLanguage(const std::string& language)
+{
     if(std::find(supportedLangs.begin(),
                  supportedLangs.end(),
-                 language) == supportedLangs.end()) {
+                 language) == supportedLangs.end())
+    {
         return false;
     }
 
     Speech::language = language;
+    ROS_INFO("Language set to %s", Speech::language.c_str());
     return true;
 }
 
-bool Speech::setSpeed(const int16_t speed) {
+bool Speech::setSpeed(const int16_t speed)
+{
     Speech::speed = speed;
+    ROS_INFO("Speed set to %i", Speech::speed);
     return true;
 }
 
-bool Speech::setPitch(const int16_t pitch){
+bool Speech::setPitch(const int16_t pitch)
+{
     Speech::pitch = pitch;
+    ROS_INFO("Pitch set to %i", Speech::pitch);
     return true;
 }
 
-std::vector<std::string> Speech::getSupportedLang() {
+std::vector<std::string> Speech::getSupportedLang()
+{
     return supportedLangs;
 }
 
-int16_t Speech::getSpeed() {
+int16_t Speech::getSpeed()
+{
     return speed;
 }
 
-int16_t Speech::getPitch(){
+int16_t Speech::getPitch()
+{
     return pitch;
 }
 
-bool Speech::say(const std::string& text) {
+std::string Speech::getLanguage()
+{
+    return language;
+}
+
+bool Speech::say(const std::string& text)
+{
     std::string waveFile = renderSpeech(text);
     if(waveFile.size() == 0)
         return false;
     return playWav(waveFile);
 }
 
-bool Speech::play() {
-    return false;
-}
+bool Speech::resetDefaults()
+{
+    int         pitch =  0;
+    int         speed =  0;
+    std::string lang  = "";
 
-bool Speech::pause() {
-    return false;
-}
+    nh.param<int>        ("svox_tts/pitch",    pitch, DEFAULT_PITCH);
+    nh.param<int>        ("svox_tts/speed",    speed, DEFAULT_SPEED);
+    nh.param<std::string>("svox_tts/language", lang,  DEFAULT_LANG);
 
-bool Speech::stop() {
-   return false;
+    setPitch(pitch);
+    setSpeed(speed);
+
+    return setLanguage(lang);
 }
 
 const std::string Speech::renderSpeech(const std::string &text)

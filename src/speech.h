@@ -15,6 +15,12 @@
 #include <ros/console.h>
 #include <std_msgs/String.h>
 
+#include <svox_tts/Speech.h>
+
+#define DEFAULT_PITCH     55
+#define DEFAULT_SPEED    110
+#define DEFAULT_LANG  "en-US"
+
 /****************************************************************
  * @brief The Speech class
  */
@@ -26,16 +32,17 @@ public:
     ~Speech();
 
     // Speech_IDL
-    virtual bool setLanguage(const std::string& language);
-    virtual std::vector<std::string>  getSupportedLang();
-    virtual bool say(const std::string& text);
     virtual bool setSpeed(const int16_t speed);
     virtual bool setPitch(const int16_t pitch);
-    virtual int16_t getSpeed();
-    virtual int16_t getPitch();
-    virtual bool play();
-    virtual bool pause();
-    virtual bool stop();
+    virtual bool setLanguage(const std::string& language);
+    virtual int16_t     getSpeed();
+    virtual int16_t     getPitch();
+    virtual std::string getLanguage();
+    virtual std::vector<std::string>  getSupportedLang();
+
+    virtual bool say(const std::string& text);
+
+    bool resetDefaults();
 
 private:
     /**
@@ -56,11 +63,17 @@ private:
 private: // ROS Stuff
     ros::NodeHandle nh;
 
-    ros::Subscriber s_sub;  // Subscriber for the speech output
+    ros::ServiceServer service;  // Service for the speech output and other options
+    std::string speech;          // Text to say
 
-    std::string speech;             // Text to display
-
-    void speechCb(const std_msgs::String& msg);
+    /**
+     * Callback for the service that interfaces with this class
+     * @param  req the speech request
+     * @param  res the speech response (res.success either true or false)
+     * @return     true always :)
+     */
+    bool serviceCb(svox_tts::Speech::Request  &req,
+                   svox_tts::Speech::Response &res);
 
 private: // picotts
     /* adapation layer global variables */
